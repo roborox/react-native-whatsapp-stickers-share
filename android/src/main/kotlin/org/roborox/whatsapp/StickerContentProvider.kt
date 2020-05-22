@@ -33,14 +33,14 @@ class StickerContentProvider : ContentProvider() {
     }
 
     private val stickersDir by lazy { GlobalScope.async { withContext(Dispatchers.IO) {
-        val cacheDir = this@StickerContentProvider.context.cacheDir
-        val stickersDir = File(cacheDir.absolutePath + File.pathSeparator + STICKERS_FOLDER_NAME)
+        val cacheDir = this@StickerContentProvider.context.externalCacheDir
+        val stickersDir = File(cacheDir.absolutePath + File.separator + STICKERS_FOLDER_NAME)
         if (!stickersDir.exists()) stickersDir.mkdir()
         stickersDir
     } } }
 
     private suspend fun packDir(identifier: String) = withContext(Dispatchers.IO) {
-        val packDir = File(stickersDir.await().absolutePath + File.pathSeparator + identifier)
+        val packDir = File(stickersDir.await().absolutePath + File.separator + identifier)
         if (!packDir.exists()) packDir.mkdir()
         packDir
     }
@@ -51,7 +51,7 @@ class StickerContentProvider : ContentProvider() {
         for (packDir in stickersDir.listFiles()) {
             if (!packDir.isDirectory) continue
             try {
-                val metadataFile = File(packDir.absolutePath + File.pathSeparator + METADATA_FILENAME)
+                val metadataFile = File(packDir.absolutePath + File.separator + METADATA_FILENAME)
                 val stickerPack = Json.parse(StickerPack.serializer(), metadataFile.readText())
                 stickerPacks.add(stickerPack)
             } catch (error: Throwable) {
@@ -63,7 +63,7 @@ class StickerContentProvider : ContentProvider() {
     }
 
     private suspend fun readStickerPack(identifier: String): StickerPack {
-        val metadataFile = File(packDir(identifier).absolutePath + File.pathSeparator + METADATA_FILENAME)
+        val metadataFile = File(packDir(identifier).absolutePath + File.separator + METADATA_FILENAME)
         return Json.parse(StickerPack.serializer(), metadataFile.readText())
     }
 
@@ -98,7 +98,9 @@ class StickerContentProvider : ContentProvider() {
                 PUBLISHER_EMAIL,
                 PUBLISHER_WEBSITE,
                 PRIVACY_POLICY_WEBSITE,
-                LICENSE_AGREENMENT_WEBSITE
+                LICENSE_AGREENMENT_WEBSITE,
+                IMAGE_DATA_VERSION,
+                AVOID_CACHE
         ))
         for (stickerPack in packs) {
             val builder = cursor.newRow()
@@ -133,19 +135,34 @@ class StickerContentProvider : ContentProvider() {
     override fun openAssetFile(uri: Uri, mode: String?): AssetFileDescriptor {
         return when (matcher.match(uri)) {
             STICKER_FILE -> openStickerAsset(uri)
-            TRAY_FILE -> openStickerAsset(uri)
-            else -> throw FileNotFoundException("Not supported for $uri")
+            TRAY_FILE -> openTrayAsset(uri)
+            else -> {
+                Log.d(TAG, "Asset not found, uri: $uri")
+                throw FileNotFoundException("Not supported for $uri")
+            }
         }
     }
 
     private fun openStickerAsset(uri: Uri): AssetFileDescriptor {
-        Log.d(TAG, "openStickerAsset $uri")
         val parts = uri.pathSegments
-        val fileName = parts.removeAt(parts.lastIndex)
-        val identifier = parts.removeAt(parts.lastIndex)
+        val fileName = parts[parts.size - 1]
+        val identifier = parts[parts.size - 2]
+        Log.d(TAG, "openStickerAsset $identifier/$fileName")
         val packDir = runBlocking { packDir(identifier).absolutePath }
-        val file = File(packDir + File.pathSeparator + fileName)
-        return AssetFileDescriptor(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY), 0, -1)
+        val file = File(packDir + File.separator + fileName)
+        return AssetFileDescriptor(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY), 0, AssetFileDescriptor.UNKNOWN_LENGTH)
+    }
+
+    private fun openTrayAsset(uri: Uri): AssetFileDescriptor {
+        Log.d(TAG, "openTrayAsset $uri")
+        val parts = uri.pathSegments
+        Log.d(TAG, "openTrayAsset $parts")
+        val identifier = parts[parts.size - 2]
+        Log.d(TAG, "openTrayAsset $identifier")
+        val packDir = runBlocking { packDir(identifier).absolutePath }
+        val file = File(packDir + File.separator + TRAY_IMAGE_FILENAME)
+        Log.d(TAG, "openTrayAsset ${file.absolutePath}")
+        return AssetFileDescriptor(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY), 0, AssetFileDescriptor.UNKNOWN_LENGTH)
     }
 
     override fun getType(uri: Uri): String {
@@ -154,7 +171,7 @@ class StickerContentProvider : ContentProvider() {
             METADATA -> "vnd.android.cursor.dir/vnd.$authority.metadata"
             METADATA_SINGLE -> "vnd.android.cursor.item/vnd.$authority.metadata"
             STICKERS -> "vnd.android.cursor.dir/vnd.$authority.stickers"
-            TRAY_FILE -> "image/png"
+            TRAY_FILE -> "image/webp"
             STICKER_FILE -> "image/webp"
             else -> throw IllegalArgumentException("unsupported uri: $uri")
         }
@@ -163,12 +180,12 @@ class StickerContentProvider : ContentProvider() {
     }
 
     override fun insert(uri: Uri, values: ContentValues): Uri {
-        val identifier = values.getAsString(STICKER_PACK_IDENTIFIER_IN_QUERY)
-        GlobalScope.launch {
+        val identifier = values.getAsString(STICKER_PACK_IDENTIFIER_IN_INSERT)
+        runBlocking {
             val pack = readStickerPack(identifier)
             stickerPacks.add(pack)
         }
-        return Uri.fromParts("content", "//${BuildConfig.CONTENT_PROVIDER_AUTHORITY}/metadata/$identifier", null)
+        return Uri.parse("content://${BuildConfig.CONTENT_PROVIDER_AUTHORITY}/metadata/$identifier")
     }
 
     override fun update(uri: Uri?, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int {
@@ -190,6 +207,7 @@ class StickerContentProvider : ContentProvider() {
 
         private const val STICKERS_FOLDER_NAME = "stickers"
         private const val METADATA_FILENAME = "metadata.json"
+        private const val TRAY_IMAGE_FILENAME = "tray.png"
 
         private const val STICKER_PACK_IDENTIFIER_IN_INSERT = "sticker_pack_id"
 
@@ -203,6 +221,8 @@ class StickerContentProvider : ContentProvider() {
         private const val PUBLISHER_WEBSITE = "sticker_pack_publisher_website"
         private const val PRIVACY_POLICY_WEBSITE = "sticker_pack_privacy_policy_website"
         private const val LICENSE_AGREENMENT_WEBSITE = "sticker_pack_license_agreement_website"
+        private const val IMAGE_DATA_VERSION = "image_data_version"
+        private const val AVOID_CACHE = "whatsapp_will_not_cache_stickers"
 
         private const val STICKER_FILE_NAME_IN_QUERY = "sticker_file_name"
         private const val STICKER_FILE_EMOJI_IN_QUERY = "sticker_emoji"

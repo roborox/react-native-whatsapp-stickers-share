@@ -9,7 +9,7 @@ internal data class StickerPack(
         var identifier: String,
         var name: String,
         var publisher: String,
-        var trayImageFile: String?,
+        var trayImageFile: String,
         var publisherEmail: String,
         var publisherWebsite: String,
         var privacyPolicyWebsite: String,

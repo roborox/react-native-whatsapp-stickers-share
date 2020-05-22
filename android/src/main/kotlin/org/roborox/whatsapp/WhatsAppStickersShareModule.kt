@@ -38,10 +38,10 @@ class WhatsAppStickersShareModule : ReactContextBaseJavaModule, ActivityEventLis
     override fun getName() = "WhatsAppStickersShare"
 
     private suspend fun packDir(identifier: String) = withContext(Dispatchers.IO) {
-        val cacheDir = this@WhatsAppStickersShareModule.reactContext.cacheDir
-        val stickersDir = File(cacheDir.absolutePath + File.pathSeparator + STICKERS_FOLDER_NAME)
+        val cacheDir = this@WhatsAppStickersShareModule.reactContext.externalCacheDir
+        val stickersDir = File(cacheDir.absolutePath + File.separator + STICKERS_FOLDER_NAME)
         if (!stickersDir.exists()) stickersDir.mkdir()
-        val packDir = File(stickersDir.absolutePath + File.pathSeparator + identifier)
+        val packDir = File(stickersDir.absolutePath + File.separator + identifier)
         if (!packDir.exists()) packDir.mkdir()
         packDir
     }
@@ -60,22 +60,22 @@ class WhatsAppStickersShareModule : ReactContextBaseJavaModule, ActivityEventLis
                 val packDir = packDir(identifier)
                 val trayImage = URL(config.getString("trayImage")!!).let {
                     it.openStream().use { input ->
-                        val file = File(packDir.absolutePath + File.pathSeparator + TRAY_IMAGE_NAME)
+                        val file = File(packDir.absolutePath + File.separator + TRAY_IMAGE_NAME)
                         FileOutputStream(file).use { output -> input.copyTo(output) }
                         file.name
                     }
                 }
                 val stickerPack = StickerPack(
-                        identifier,
-                        title,
-                        config.getString("author")!!,
-                        trayImage,
-                        config.getString("publisherEmail")!!,
-                        config.getString("publisherURL")!!,
-                        config.getString("privacyPolicyURL")!!,
-                        config.getString("licenseURL")!!,
-                        "",
-                        false
+                        identifier = identifier,
+                        name = title,
+                        trayImageFile = trayImage,
+                        publisher = config.getString("author")!!,
+                        publisherEmail = config.getString("publisherEmail")!!,
+                        publisherWebsite = config.getString("publisherURL")!!,
+                        privacyPolicyWebsite = config.getString("privacyPolicyURL")!!,
+                        licenseAgreementWebsite = config.getString("licenseURL")!!,
+                        imageDataVersion = "1",
+                        avoidCache = false
                 )
                 pending[identifier] = arrayListOf(promise)
 
@@ -106,12 +106,17 @@ class WhatsAppStickersShareModule : ReactContextBaseJavaModule, ActivityEventLis
                         Unit
                     })
                 }
+                awaitAll(*downloads.toTypedArray())
                 withContext(Dispatchers.IO) {
                     val json = Json.stringify(StickerPack.serializer(), stickerPack)
-                    val metaFile = File(packDir.absolutePath + File.pathSeparator + METADATA_FILENAME)
+                    val metaFile = File(packDir.absolutePath + File.separator + METADATA_FILENAME)
                     metaFile.writeText(json)
                 }
-                awaitAll(*downloads.toTypedArray())
+
+                Log.d(TAG, "Submit id to provider: $identifier")
+                providerClient.insert(STICKER_PACK_ADDED_URI, ContentValues().apply {
+                    put(STICKER_PACK_IDENTIFIER_IN_INSERT, identifier)
+                })
 
                 val intent = Intent()
                 intent.action = ACTION_ADD_PACK
@@ -126,10 +131,6 @@ class WhatsAppStickersShareModule : ReactContextBaseJavaModule, ActivityEventLis
                 } else {
                     pending[identifier]!!.forEach { it.resolve(false) }
                 }
-
-                providerClient.insert(STICKER_PACK_ADDED_URI, ContentValues().apply {
-                    put(STICKER_PACK_IDENTIFIER_IN_INSERT, identifier)
-                })
             } catch (error: Throwable) {
                 val identifier = config.getString("identifier")
                 if (identifier !== null) {
@@ -145,14 +146,14 @@ class WhatsAppStickersShareModule : ReactContextBaseJavaModule, ActivityEventLis
         private const val STICKERS_FOLDER_NAME = "stickers"
         private const val METADATA_FILENAME = "metadata.json"
         private const val TRAY_IMAGE_NAME = "tray.png"
-        private const val STICKER_IMAGE_PREFIX = "sticker-"
+        private const val STICKER_IMAGE_PREFIX = "sticker_"
         private const val STICKER_IMAGE_SUFFIX = ".webp"
 
         private const val EXTRA_STICKER_PACK_ID = "sticker_pack_id"
         private const val EXTRA_STICKER_PACK_AUTHORITY = "sticker_pack_authority"
         private const val EXTRA_STICKER_PACK_NAME = "sticker_pack_name"
 
-        private val STICKER_PACK_ADDED_URI = Uri.fromParts("content", "//${BuildConfig.CONTENT_PROVIDER_AUTHORITY}/", null)
+        private val STICKER_PACK_ADDED_URI = Uri.parse("content://${BuildConfig.CONTENT_PROVIDER_AUTHORITY}/")
         private const val STICKER_PACK_IDENTIFIER_IN_INSERT = "sticker_pack_id"
 
         private const val ACTION_ADD_PACK = "com.whatsapp.intent.action.ENABLE_STICKER_PACK"
