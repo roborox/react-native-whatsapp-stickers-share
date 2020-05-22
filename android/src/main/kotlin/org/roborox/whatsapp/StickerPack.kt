@@ -20,7 +20,7 @@ internal class StickerPack: Parcelable {
         set(value) {
             field = value
             totalSize = 0
-            for (sticker in value ?: emptyList()) {
+            for (sticker in value) {
                 totalSize += sticker.size
             }
         }
