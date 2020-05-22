@@ -2,23 +2,20 @@ package org.roborox.whatsapp
 
 import android.os.Parcel
 import android.os.Parcelable
+import java.io.Serializable
 
 
-internal class Sticker : Parcelable {
-    val imageFileName: String
-    val emojies: List<String>
-    var size: Long = 0
-
-    constructor(imageFileName: String, emojies: List<String>) {
-        this.imageFileName = imageFileName
-        this.emojies = emojies
-    }
-
-    private constructor(parcel: Parcel) {
-        imageFileName = parcel.readString()
-        emojies = parcel.createStringArrayList()
-        size = parcel.readLong()
-    }
+@kotlinx.serialization.Serializable
+internal data class Sticker(
+        val imageFileName: String,
+        val emojies: List<String>,
+        var size: Long = 0
+) : Parcelable, Serializable {
+    private constructor(parcel: Parcel): this(
+            imageFileName = parcel.readString(),
+            emojies = parcel.createStringArrayList(),
+            size = parcel.readLong()
+    ) { }
 
     override fun describeContents(): Int {
         return 0
