@@ -2,7 +2,7 @@
           package="org.roborox.whatsapp">
   <application>
     <provider android:name=".StickerContentProvider"
-              android:authorities="${contentProviderAuthority}"
+              android:authorities="org.roborox.whatsapp.StickerContentProvider"
               android:enabled="true"
               android:exported="true"
               android:readPermission="com.whatsapp.sticker.READ" />
