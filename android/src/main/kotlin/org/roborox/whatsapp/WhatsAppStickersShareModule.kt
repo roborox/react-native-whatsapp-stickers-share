@@ -15,6 +15,7 @@ import java.io.*
 import java.net.URL
 
 
+@UnstableDefault
 class WhatsAppStickersShareModule(
         private val reactContext: ReactApplicationContext
 ) : ReactContextBaseJavaModule(reactContext), ActivityEventListener {
@@ -61,7 +62,6 @@ class WhatsAppStickersShareModule(
         }
     }
 
-    @UnstableDefault
     private suspend fun createStickerPack(config: ReadableMap): StickerPack {
         val identifier = config.getString("identifier")!!
         val title = config.getString("title")!!
@@ -91,7 +91,7 @@ class WhatsAppStickersShareModule(
                 val emojisReadable = sticker.getArray("emojis")!!
                 emojis.ensureCapacity(emojisReadable.size())
                 for (emojiIndex in 0 until emojisReadable.size()) {
-                    val emoji = emojisReadable!!.getString(emojiIndex)
+                    val emoji = emojisReadable.getString(emojiIndex)
                     if (emoji !== null) emojis.add(emoji)
                 }
             }
@@ -106,7 +106,6 @@ class WhatsAppStickersShareModule(
         return stickerPack
     }
 
-    @UnstableDefault
     @ReactMethod
     fun share(config: ReadableMap, promise: Promise) {
         GlobalScope.launch {

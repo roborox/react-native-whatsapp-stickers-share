@@ -9,11 +9,13 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import kotlinx.coroutines.*
+import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileNotFoundException
 
 
+@UnstableDefault
 class StickerContentProvider : ContentProvider() {
     private val matcher: UriMatcher = UriMatcher(UriMatcher.NO_MATCH)
 
