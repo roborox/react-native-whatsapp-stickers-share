@@ -19,8 +19,6 @@ import java.net.URL
 class WhatsAppStickersShareModule(
         private val reactContext: ReactApplicationContext
 ) : ReactContextBaseJavaModule(reactContext), ActivityEventListener {
-//    private val pending = ArrayMap<String, Promise>()
-
     init {
         reactContext.addActivityEventListener(this)
     }
@@ -32,7 +30,7 @@ class WhatsAppStickersShareModule(
             Log.e(TAG, "Failed to add pack: $error")
             return
         }
-        Log.e(TAG, "Pack added: ${data.extras}")
+        Log.e(TAG, "Pack added")
     }
 
     override fun onNewIntent(intent: Intent?) { }
@@ -130,7 +128,6 @@ class WhatsAppStickersShareModule(
 
                 val activity = currentActivity
                 if (activity !== null && activity.packageManager.resolveActivity(intent, 0) !== null) {
-//                    pending[stickerPack.identifier] = promise
                     activity.startActivityForResult(intent, REQUEST_CODE_ADD_PACK)
                     promise.resolve(true)
                 } else {
