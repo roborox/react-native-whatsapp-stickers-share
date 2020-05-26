@@ -3,7 +3,6 @@ package org.roborox.whatsapp
 import android.content.ContentProvider
 import android.content.ContentValues
 import android.content.UriMatcher
-import android.content.res.AssetFileDescriptor
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
@@ -17,7 +16,6 @@ import java.io.FileNotFoundException
 
 class StickerContentProvider : ContentProvider() {
     private val matcher: UriMatcher = UriMatcher(UriMatcher.NO_MATCH)
-    private var stickerPacks: MutableList<StickerPack> = ArrayList()
 
     override fun onCreate(): Boolean {
         val authority = BuildConfig.CONTENT_PROVIDER_AUTHORITY
@@ -26,64 +24,40 @@ class StickerContentProvider : ContentProvider() {
         matcher.addURI(authority, "stickers/*", STICKERS)
         matcher.addURI(authority, "stickers_asset/*/tray.png", TRAY_FILE)
         matcher.addURI(authority, "stickers_asset/*/*", STICKER_FILE)
-        GlobalScope.launch {
-            stickerPacks = readAllStickerPacks()
-        }
         return true
     }
 
-    private val stickersDir by lazy { GlobalScope.async { withContext(Dispatchers.IO) {
-        val cacheDir = this@StickerContentProvider.context.externalCacheDir
+    private suspend fun stickersDir() = withContext(Dispatchers.IO) {
+        val cacheDir = this@StickerContentProvider.context!!.externalCacheDir!!
         val stickersDir = File(cacheDir.absolutePath + File.separator + STICKERS_FOLDER_NAME)
         if (!stickersDir.exists()) stickersDir.mkdir()
         stickersDir
-    } } }
+    }
 
     private suspend fun packDir(identifier: String) = withContext(Dispatchers.IO) {
-        val packDir = File(stickersDir.await().absolutePath + File.separator + identifier)
+        val packDir = File(stickersDir().absolutePath + File.separator + identifier)
         if (!packDir.exists()) packDir.mkdir()
         packDir
     }
 
-    private suspend fun readAllStickerPacks(): ArrayList<StickerPack> {
-        val stickersDir = stickersDir.await()
+    private suspend fun readStickerPack(identifier: String): StickerPack = withContext(Dispatchers.IO) {
+        val metadataFile = File(packDir(identifier).absolutePath + File.separator + METADATA_FILENAME)
+        Json.parse(StickerPack.serializer(), metadataFile.readText())
+    }
+
+    private suspend fun readAllStickerPacks(): ArrayList<StickerPack> = withContext(Dispatchers.IO) {
+        val stickersDir = stickersDir()
         val stickerPacks = ArrayList<StickerPack>()
         for (packDir in stickersDir.listFiles()) {
             if (!packDir.isDirectory) continue
             try {
-                val metadataFile = File(packDir.absolutePath + File.separator + METADATA_FILENAME)
-                val stickerPack = Json.parse(StickerPack.serializer(), metadataFile.readText())
+                val stickerPack = readStickerPack(packDir.name)
                 stickerPacks.add(stickerPack)
             } catch (error: Throwable) {
-                Log.e(TAG, "Failed to read stickers pack from file system", error)
                 packDir.deleteRecursively()
             }
         }
-        return stickerPacks
-    }
-
-    private suspend fun readStickerPack(identifier: String): StickerPack {
-        val metadataFile = File(packDir(identifier).absolutePath + File.separator + METADATA_FILENAME)
-        return Json.parse(StickerPack.serializer(), metadataFile.readText())
-    }
-
-    private fun getStickerPack(identifier: String): StickerPack {
-        val stored = stickerPacks.firstOrNull { it.identifier === identifier }
-        if (stored !== null) return stored
-        return runBlocking {
-            val pack = readStickerPack(identifier)
-            stickerPacks.add(pack)
-            pack
-        }
-    }
-
-    override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {
-        return when (matcher.match(uri)) {
-            METADATA -> getMetadata(stickerPacks)
-            METADATA_SINGLE -> getMetadata(listOf(getStickerPack(uri.lastPathSegment)))
-            STICKERS -> getStickers(uri.lastPathSegment)
-            else -> throw IllegalArgumentException("uri not supported: $uri")
-        }
+        stickerPacks
     }
 
     private fun getMetadata(packs: List<StickerPack>): Cursor {
@@ -107,7 +81,7 @@ class StickerContentProvider : ContentProvider() {
             builder.add(stickerPack.identifier)
             builder.add(stickerPack.name)
             builder.add(stickerPack.publisher)
-            builder.add(stickerPack.trayImageFile)
+            builder.add(stickerPack.trayImageFileName)
             builder.add(stickerPack.androidPlayStoreLink)
             builder.add(stickerPack.iosAppStoreLink)
             builder.add(stickerPack.publisherEmail)
@@ -120,49 +94,41 @@ class StickerContentProvider : ContentProvider() {
         return cursor
     }
 
-    private fun getStickers(id: String): Cursor {
+    private suspend fun getStickers(id: String): Cursor {
         Log.d(TAG, "getStickers id=$id")
         val cursor = MatrixCursor(arrayOf(STICKER_FILE_NAME_IN_QUERY, STICKER_FILE_EMOJI_IN_QUERY))
-        val pack = getStickerPack(id)
+        val pack = readStickerPack(id)
         for (sticker in pack.stickers) {
             val b = cursor.newRow()
             b.add(sticker.imageFileName)
-            b.add(sticker.emojies)
+            b.add(sticker.emojis)
         }
         return cursor
     }
 
-    override fun openAssetFile(uri: Uri, mode: String?): AssetFileDescriptor {
+    override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {
         return when (matcher.match(uri)) {
-            STICKER_FILE -> openStickerAsset(uri)
-            TRAY_FILE -> openTrayAsset(uri)
-            else -> {
-                Log.d(TAG, "Asset not found, uri: $uri")
-                throw FileNotFoundException("Not supported for $uri")
-            }
+            METADATA -> getMetadata(runBlocking { readAllStickerPacks() })
+            METADATA_SINGLE -> getMetadata(listOf(runBlocking { readStickerPack(uri.lastPathSegment!!) }))
+            STICKERS -> runBlocking { getStickers(uri.lastPathSegment!!) }
+            else -> throw IllegalArgumentException("uri not supported: $uri")
         }
     }
 
-    private fun openStickerAsset(uri: Uri): AssetFileDescriptor {
-        val parts = uri.pathSegments
-        val fileName = parts[parts.size - 1]
-        val identifier = parts[parts.size - 2]
-        Log.d(TAG, "openStickerAsset $identifier/$fileName")
-        val packDir = runBlocking { packDir(identifier).absolutePath }
-        val file = File(packDir + File.separator + fileName)
-        return AssetFileDescriptor(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY), 0, AssetFileDescriptor.UNKNOWN_LENGTH)
+    private suspend fun openFileDescriptor(uri: Uri): ParcelFileDescriptor {
+        Log.d(TAG, "openStickerAsset $uri")
+        val segments = uri.pathSegments
+        val fileName = segments[segments.size - 1]
+        val identifier = segments[segments.size - 2]
+        val file = File(packDir(identifier).absolutePath + File.separator + fileName)
+        return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
     }
 
-    private fun openTrayAsset(uri: Uri): AssetFileDescriptor {
-        Log.d(TAG, "openTrayAsset $uri")
-        val parts = uri.pathSegments
-        Log.d(TAG, "openTrayAsset $parts")
-        val identifier = parts[parts.size - 2]
-        Log.d(TAG, "openTrayAsset $identifier")
-        val packDir = runBlocking { packDir(identifier).absolutePath }
-        val file = File(packDir + File.separator + TRAY_IMAGE_FILENAME)
-        Log.d(TAG, "openTrayAsset ${file.absolutePath}")
-        return AssetFileDescriptor(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY), 0, AssetFileDescriptor.UNKNOWN_LENGTH)
+    override fun openFile(uri: Uri, mode: String?): ParcelFileDescriptor {
+        return when (matcher.match(uri)) {
+            STICKER_FILE, TRAY_FILE -> runBlocking { openFileDescriptor(uri) }
+            else -> throw FileNotFoundException("Not supported for $uri")
+        }
     }
 
     override fun getType(uri: Uri): String {
@@ -180,12 +146,7 @@ class StickerContentProvider : ContentProvider() {
     }
 
     override fun insert(uri: Uri, values: ContentValues): Uri {
-        val identifier = values.getAsString(STICKER_PACK_IDENTIFIER_IN_INSERT)
-        runBlocking {
-            val pack = readStickerPack(identifier)
-            stickerPacks.add(pack)
-        }
-        return Uri.parse("content://${BuildConfig.CONTENT_PROVIDER_AUTHORITY}/metadata/$identifier")
+        throw UnsupportedOperationException("Not supported")
     }
 
     override fun update(uri: Uri?, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int {
@@ -207,9 +168,6 @@ class StickerContentProvider : ContentProvider() {
 
         private const val STICKERS_FOLDER_NAME = "stickers"
         private const val METADATA_FILENAME = "metadata.json"
-        private const val TRAY_IMAGE_FILENAME = "tray.png"
-
-        private const val STICKER_PACK_IDENTIFIER_IN_INSERT = "sticker_pack_id"
 
         private const val STICKER_PACK_IDENTIFIER_IN_QUERY = "sticker_pack_identifier"
         private const val STICKER_PACK_NAME_IN_QUERY = "sticker_pack_name"
