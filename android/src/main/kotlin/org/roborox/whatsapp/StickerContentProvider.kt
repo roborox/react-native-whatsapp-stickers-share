@@ -29,25 +29,25 @@ class StickerContentProvider : ContentProvider() {
         return true
     }
 
-    private suspend fun stickersDir() = withContext(Dispatchers.IO) {
+    private fun stickersDir(): File {
         val cacheDir = this@StickerContentProvider.context!!.externalCacheDir!!
         val stickersDir = File(cacheDir.absolutePath + File.separator + STICKERS_FOLDER_NAME)
         if (!stickersDir.exists()) stickersDir.mkdir()
-        stickersDir
+        return stickersDir
     }
 
-    private suspend fun packDir(identifier: String) = withContext(Dispatchers.IO) {
+    private fun packDir(identifier: String): File {
         val packDir = File(stickersDir().absolutePath + File.separator + identifier)
         if (!packDir.exists()) packDir.mkdir()
-        packDir
+        return packDir
     }
 
-    private suspend fun readStickerPack(identifier: String): StickerPack = withContext(Dispatchers.IO) {
+    private fun readStickerPack(identifier: String): StickerPack {
         val metadataFile = File(packDir(identifier).absolutePath + File.separator + METADATA_FILENAME)
-        Json.parse(StickerPack.serializer(), metadataFile.readText())
+        return Json.parse(StickerPack.serializer(), metadataFile.readText())
     }
 
-    private suspend fun readAllStickerPacks(): ArrayList<StickerPack> = withContext(Dispatchers.IO) {
+    private fun readAllStickerPacks(): ArrayList<StickerPack> {
         val stickersDir = stickersDir()
         val stickerPacks = ArrayList<StickerPack>()
         for (packDir in stickersDir.listFiles()) {
@@ -59,7 +59,7 @@ class StickerContentProvider : ContentProvider() {
                 packDir.deleteRecursively()
             }
         }
-        stickerPacks
+        return stickerPacks
     }
 
     private fun getMetadata(packs: List<StickerPack>): Cursor {
@@ -96,7 +96,7 @@ class StickerContentProvider : ContentProvider() {
         return cursor
     }
 
-    private suspend fun getStickers(id: String): Cursor {
+    private fun getStickers(id: String): Cursor {
         Log.d(TAG, "getStickers id=$id")
         val cursor = MatrixCursor(arrayOf(STICKER_FILE_NAME_IN_QUERY, STICKER_FILE_EMOJI_IN_QUERY))
         val pack = readStickerPack(id)
@@ -110,14 +110,14 @@ class StickerContentProvider : ContentProvider() {
 
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {
         return when (matcher.match(uri)) {
-            METADATA -> getMetadata(runBlocking { readAllStickerPacks() })
-            METADATA_SINGLE -> getMetadata(listOf(runBlocking { readStickerPack(uri.lastPathSegment!!) }))
-            STICKERS -> runBlocking { getStickers(uri.lastPathSegment!!) }
+            METADATA -> getMetadata(readAllStickerPacks())
+            METADATA_SINGLE -> getMetadata(listOf(readStickerPack(uri.lastPathSegment!!)))
+            STICKERS -> getStickers(uri.lastPathSegment!!)
             else -> throw IllegalArgumentException("uri not supported: $uri")
         }
     }
 
-    private suspend fun openFileDescriptor(uri: Uri): ParcelFileDescriptor {
+    private fun openFileDescriptor(uri: Uri): ParcelFileDescriptor {
         Log.d(TAG, "openStickerAsset $uri")
         val segments = uri.pathSegments
         val fileName = segments[segments.size - 1]
@@ -128,7 +128,7 @@ class StickerContentProvider : ContentProvider() {
 
     override fun openFile(uri: Uri, mode: String?): ParcelFileDescriptor {
         return when (matcher.match(uri)) {
-            STICKER_FILE, TRAY_FILE -> runBlocking { openFileDescriptor(uri) }
+            STICKER_FILE, TRAY_FILE -> openFileDescriptor(uri)
             else -> throw FileNotFoundException("Not supported for $uri")
         }
     }
