@@ -17,12 +17,13 @@ export interface StickerPackConfig {
 	stickers: StickerConfig[]
 }
 
-export interface WhatsAppStickersShare {
-	isWhatsAppAvailable: () => Promise<boolean>,
-	share: (config: StickerPackConfig) => Promise<true>
+export class WhatsAppStickersShare {
+	share(config: StickerPackConfig) {
+		return NativeModules.WhatsAppStickersShare.share(config)
+	}
+	isWhatsAppAvailable() {
+		return Linking.canOpenURL("whatsapp://send")
+	}
 }
 
-export default {
-	...NativeModules.WhatsAppStickersShare,
-	isWhatsAppAvailable: async () => Linking.canOpenURL("whatsapp://send")
-} as WhatsAppStickersShare
+export default new WhatsAppStickersShare()
