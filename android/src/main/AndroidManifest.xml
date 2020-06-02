@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           package="org.roborox.whatsapp">
-
+  <application>
+    <provider android:name=".StickerContentProvider"
+              android:authorities="org.roborox.whatsapp.StickerContentProvider"
+              android:enabled="true"
+              android:exported="true"
+              android:readPermission="com.whatsapp.sticker.READ" />
+  </application>
 </manifest>
