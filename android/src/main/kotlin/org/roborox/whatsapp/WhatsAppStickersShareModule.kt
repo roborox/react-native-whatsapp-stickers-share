@@ -1,12 +1,11 @@
 package org.roborox.whatsapp
 
 import android.app.Activity
-import android.content.ContentProviderClient
-import android.content.ContentValues
 import android.content.Intent
-import android.net.Uri
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.media.ThumbnailUtils
 import android.util.Log
-import androidx.collection.ArrayMap
 import com.facebook.react.bridge.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.UnstableDefault
@@ -52,19 +51,25 @@ class WhatsAppStickersShareModule(
         return File(stickersDir.absolutePath + File.separator + identifier)
     }
 
-    private suspend fun storeImage(imageUrl: String, file: File) = withContext(Dispatchers.IO) {
-        @Suppress("BlockingMethodInNonBlockingContext")
-        URL(imageUrl).openStream().use { input ->
-            FileOutputStream(file).use { output -> input.copyTo(output) }
+    @Suppress("BlockingMethodInNonBlockingContext")
+    private suspend fun storeImage(imageUrl: String, file: File, size: Int) = withContext(Dispatchers.IO) {
+        URL(imageUrl).openStream().use { input -> FileOutputStream(file).use { output ->
+            val source = BitmapFactory.decodeStream(input)
+            val thumb = ThumbnailUtils.extractThumbnail(source, size, size, ThumbnailUtils.OPTIONS_RECYCLE_INPUT)
+            thumb.compress(Bitmap.CompressFormat.WEBP, 0, output)
             file.name
-        }
+        } }
     }
 
     private suspend fun createStickerPack(config: ReadableMap): StickerPack {
         val identifier = config.getString("identifier")!!
         val title = config.getString("title")!!
         val packDir = packDir(identifier)
-        val trayImageFileName = storeImage(config.getString("trayImage")!!, File(packDir.absolutePath + File.separator + TRAY_IMAGE_NAME))
+        val trayImageFileName = storeImage(
+                config.getString("trayImage")!!,
+                File(packDir.absolutePath + File.separator + TRAY_IMAGE_NAME),
+                TRAY_IMAGE_SIZE
+        )
         val stickerPack = StickerPack(
                 identifier = identifier,
                 name = title,
@@ -79,7 +84,7 @@ class WhatsAppStickersShareModule(
         )
 
         val stickers = config.getArray("stickers")!!
-        val downloads = ArrayList<Deferred<Unit>>()
+        val promises = ArrayList<Deferred<Unit>>()
         for (index in 0 until stickers.size()) {
             val sticker = stickers.getMap(index)
             if (sticker === null) continue
@@ -93,13 +98,13 @@ class WhatsAppStickersShareModule(
                     if (emoji !== null) emojis.add(emoji)
                 }
             }
-            downloads.add(GlobalScope.async(Dispatchers.IO) {
-                val image = storeImage(imageURL, File.createTempFile(STICKER_IMAGE_PREFIX, STICKER_IMAGE_SUFFIX, packDir))
+            promises.add(GlobalScope.async(Dispatchers.IO) {
+                val image = storeImage(imageURL, File.createTempFile(STICKER_IMAGE_PREFIX, STICKER_IMAGE_SUFFIX, packDir), STICKER_IMAGE_SIZE)
                 stickerPack.stickers.add(Sticker(image, emojis))
                 Unit
             })
         }
-        awaitAll(*downloads.toTypedArray())
+        awaitAll(*promises.toTypedArray())
 
         return stickerPack
     }
@@ -145,8 +150,10 @@ class WhatsAppStickersShareModule(
         private const val STICKERS_FOLDER_NAME = "stickers"
         private const val METADATA_FILENAME = "metadata.json"
         private const val TRAY_IMAGE_NAME = "tray.png"
+        private const val TRAY_IMAGE_SIZE = 96
         private const val STICKER_IMAGE_PREFIX = "sticker_"
         private const val STICKER_IMAGE_SUFFIX = ".webp"
+        private const val STICKER_IMAGE_SIZE = 512
 
         private const val EXTRA_STICKER_PACK_ID = "sticker_pack_id"
         private const val EXTRA_STICKER_PACK_AUTHORITY = "sticker_pack_authority"
