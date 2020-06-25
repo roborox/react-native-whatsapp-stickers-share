@@ -145,7 +145,7 @@ class WhatsAppStickersShareModule(
     }
 
     companion object {
-        private const val TAG = "org.roborox.whatsapp.WhatsAppStickersShareModule"
+        private const val TAG = "org.roborox.whatsapp"
 
         private const val STICKERS_FOLDER_NAME = "stickers"
         private const val METADATA_FILENAME = "metadata.json"
