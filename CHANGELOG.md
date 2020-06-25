@@ -1,3 +1,17 @@
+# [1.1.0](https://github.com/roborox/react-native-whatsapp-stickers-share/compare/v1.0.0...v1.1.0) (2020-06-25)
+
+
+### Bug Fixes
+
+* tag length ([e019565](https://github.com/roborox/react-native-whatsapp-stickers-share/commit/e019565f260f13e12a468f5da625b383df9071a2))
+
+
+### Features
+
+* use tag for logging ([9d6d616](https://github.com/roborox/react-native-whatsapp-stickers-share/commit/9d6d616b71cd4de3b6ecb9c59c26bf583048fc86))
+* **SM-110:** images resize and compress to webp ([c22c733](https://github.com/roborox/react-native-whatsapp-stickers-share/commit/c22c733c088c25ab452065ebbcd68f0cb8238875))
+* **SM-110:** localy convert stickers before share ([852b493](https://github.com/roborox/react-native-whatsapp-stickers-share/commit/852b493e120b9b3cb745eda2e7ec8c529176169f))
+
 # 1.0.0 (2020-06-02)
 
 
