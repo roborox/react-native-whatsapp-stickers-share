@@ -12,9 +12,9 @@ import UIKit
  *  Represents a variety of errors related to stickers.
  */
 enum StickerPackError: Error {
-    case fileNotFound
+    case fileNotFound(String)
     case emptyString
-    case unsupportedImageFormat(String)
+    case unsupportedImageFormat
     case imageTooBig(Int64)
     case incorrectImageSize(CGSize)
     case animatedImagesNotSupported
