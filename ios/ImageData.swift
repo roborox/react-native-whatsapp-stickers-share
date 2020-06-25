@@ -40,6 +40,7 @@ enum ImageDataExtension: String {
 class ImageData {
     let data: Data
     let type: ImageDataExtension
+    let size: Int
 
     var bytesSize: Int64 {
         return Int64(data.count)
@@ -58,50 +59,63 @@ class ImageData {
     }()
 
     /**
+     *  Returns a UIImage of the current image data. If data is corrupt, nil will be returned.
+     */
+    lazy var image: UIImage? = {
+        let source = type == .webp ? WebPManager.shared.decode(webPData: data) : UIImage(data: data)
+        if (source === nil) { return nil }
+        if (source!.size.width == CGFloat(self.size) && source!.size.height == CGFloat(self.size)) { return source }
+        let canvasSize = CGSize(width: self.size, height: self.size)
+        UIGraphicsBeginImageContextWithOptions(canvasSize, false, 1)
+        defer { UIGraphicsEndImageContext() }
+        source!.draw(in: CGRect(origin: .zero, size: canvasSize))
+        return UIGraphicsGetImageFromCurrentImageContext()
+    }()
+
+    /**
      *  Returns the webp data representation of the current image. If the current image is already webp,
      *  the data is simply returned. If it's png, it will returned the webp converted equivalent data.
      */
     lazy var webpData: Data? = {
-        if type == .webp {
-            return data
-        } else {
-            return WebPManager.shared.encode(pngData: data)
-        }
+        guard let image = self.image else { return nil }
+        guard let data = image.pngData() else { return nil }
+        return WebPManager.shared.encode(pngData: data)
     }()
 
-    /**
-     *  Returns a UIImage of the current image data. If data is corrupt, nil will be returned.
-     */
-    lazy var image: UIImage? = {
-        if type == .webp {
-            return WebPManager.shared.decode(webPData: data)
-        } else {
-            return UIImage(data: data)
-        }
-    }()
-
-    init(data: Data, type: ImageDataExtension) {
+    init(data: Data, type: ImageDataExtension, size: Int) {
         self.data = data
         self.type = type
+        self.size = size
+    }
+    
+    static func imageMimeType(for data: Data) throws -> ImageDataExtension {
+        var b: UInt8 = 0
+        data.copyBytes(to: &b, count: 1)
+        switch b {
+        case 0xFF:
+            return ImageDataExtension.jpeg
+        case 0x89:
+            return ImageDataExtension.png
+        case 0x52:
+            return ImageDataExtension.webp
+        default:
+            throw StickerPackError.unsupportedImageFormat
+        }
     }
 
     static func imageDataIfCompliant(contentsOfFile filename: URL, isTray: Bool) throws -> ImageData {
-        let fileExtension: String = filename.pathExtension
-        
-        if (!FileManager().fileExists(atPath: filename.path)) {
-            throw StickerPackError.fileNotFound
+        if (!FileManager.default.fileExists(atPath: filename.path)) {
+            throw StickerPackError.fileNotFound(filename.path)
         }
         
         let data = try Data(contentsOf: filename)
-        guard let imageType = ImageDataExtension(rawValue: fileExtension) else {
-            throw StickerPackError.unsupportedImageFormat(fileExtension)
-        }
+        let imageType = try imageMimeType(for: data)
 
         return try ImageData.imageDataIfCompliant(rawData: data, extensionType: imageType, isTray: isTray)
     }
 
     static func imageDataIfCompliant(rawData: Data, extensionType: ImageDataExtension, isTray: Bool) throws -> ImageData {
-        let imageData = ImageData(data: rawData, type: extensionType)
+        let imageData = ImageData(data: rawData, type: extensionType, size: isTray ? 96 : 512)
 
         guard !imageData.animated else {
             throw StickerPackError.animatedImagesNotSupported
