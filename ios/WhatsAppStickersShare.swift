@@ -33,14 +33,12 @@ class WhatsAppStickersShare: NSObject {
                             privacyPolicyWebsite: RCTConvert.nsString(config["privacyPolicyURL"]),
                             licenseAgreementWebsite: RCTConvert.nsString(config["licenseURL"])
                         )
-                        print("A", "2")
                         let stickersMap: [NSDictionary] = RCTConvert.nsArray(config["stickers"]) as! [NSDictionary]
                         let group = DispatchGroup()
 
                         stickersMap.forEach { (sticker: NSDictionary) -> Void in
                             group.enter()
                             let imageUrl = URL(string: RCTConvert.nsString(sticker["url"]))!
-                            
                             let emojis: [String]? = sticker["emojis"] != nil ? RCTConvert.nsArray(sticker["emojis"]) as? [String] : nil
                             
                             DownloadManager.shared.get(url: imageUrl) { currentUrl, error in
@@ -48,7 +46,6 @@ class WhatsAppStickersShare: NSObject {
                                     do {
                                         try stickerPack!.addSticker(contentsOfFile: currentUrl!, emojis: emojis)
                                     } catch {
-                                        print("A", "6", error)
                                         storedError = NSError(domain: "Cannot add sticker", code: 1000, userInfo: nil)
                                     }
                                 }

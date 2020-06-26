@@ -44,8 +44,8 @@ class DownloadManager {
     }
  
     func get(url: URL, completion: @escaping (_ path: URL?, _ error: NSError?) -> Void) {
-        if (url.isFileURL) {
-            completion(URL(string: url.path), nil)
+        if (!url.absoluteString.hasPrefix("http")) {
+            completion(URL(string: url.absoluteString), nil)
             return
         }
         
