@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/roborox/react-native-whatsapp-stickers-share/compare/v1.1.1...v1.1.2) (2020-06-26)
+
+
+### Bug Fixes
+
+* **SM-110:** before change size checking ([72be4b0](https://github.com/roborox/react-native-whatsapp-stickers-share/commit/72be4b07c631ec94953ef8b92f7e989fe3989085))
+
 ## [1.1.1](https://github.com/roborox/react-native-whatsapp-stickers-share/compare/v1.1.0...v1.1.1) (2020-06-26)
 
 
