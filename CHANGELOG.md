@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/roborox/react-native-whatsapp-stickers-share/compare/v1.1.0...v1.1.1) (2020-06-26)
+
+
+### Bug Fixes
+
+* fix detecting local files ([18cf342](https://github.com/roborox/react-native-whatsapp-stickers-share/commit/18cf3421f1970558aa511c86c8c9f8eaf096ae0a))
+
 # [1.1.0](https://github.com/roborox/react-native-whatsapp-stickers-share/compare/v1.0.0...v1.1.0) (2020-06-25)
 
 
