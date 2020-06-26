@@ -71,7 +71,7 @@ class Sticker {
     let emojis: [String]?
 
     var bytesSize: Int64 {
-        return imageData.bytesSize
+        return imageData.webpBytesSize
     }
 
     /**

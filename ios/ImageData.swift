@@ -42,10 +42,6 @@ class ImageData {
     let type: ImageDataExtension
     let size: Int
 
-    var bytesSize: Int64 {
-        return Int64(data.count)
-    }
-
     /**
      *  Returns whether or not the data represents an animated image.
      *  It will always return false if the image is png.
@@ -81,6 +77,18 @@ class ImageData {
         guard let data = image.pngData() else { return nil }
         return WebPManager.shared.encode(pngData: data)
     }()
+
+    var webpBytesSize: Int64 {
+        return Int64(webpData!.count)
+    }
+    
+    lazy var pngData: Data? = {
+        return self.image?.pngData()
+    }()
+    
+    var pngBytesSize: Int64 {
+        return Int64(pngData!.count)
+    }
 
     init(data: Data, type: ImageDataExtension, size: Int) {
         self.data = data
@@ -122,17 +130,16 @@ class ImageData {
         }
 
         if isTray {
-            guard imageData.bytesSize <= Limits.MaxTrayImageFileSize else {
-                throw StickerPackError.imageTooBig(imageData.bytesSize)
+            guard imageData.pngBytesSize <= Limits.MaxTrayImageFileSize else {
+                throw StickerPackError.imageTooBig(imageData.pngBytesSize)
             }
             guard imageData.image!.size == Limits.TrayImageDimensions else {
                 throw StickerPackError.incorrectImageSize(imageData.image!.size)
             }
         } else {
-            guard imageData.bytesSize <= Limits.MaxStickerFileSize else {
-                throw StickerPackError.imageTooBig(imageData.bytesSize)
+            guard imageData.webpBytesSize <= Limits.MaxStickerFileSize else {
+                throw StickerPackError.imageTooBig(imageData.webpBytesSize)
             }
-
             guard imageData.image!.size == Limits.ImageDimensions else {
                 throw StickerPackError.incorrectImageSize(imageData.image!.size)
             }
