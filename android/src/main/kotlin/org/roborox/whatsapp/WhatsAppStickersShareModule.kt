@@ -4,14 +4,20 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.media.ThumbnailUtils
+import android.graphics.Canvas
+import android.graphics.RectF
 import android.util.Log
 import com.facebook.react.bridge.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
-import java.io.*
+import java.io.File
+import java.io.FileOutputStream
+import java.lang.Exception
 import java.net.URL
+import kotlin.math.min
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTime
 
 
 @UnstableDefault
@@ -51,25 +57,57 @@ class WhatsAppStickersShareModule(
         return File(stickersDir.absolutePath + File.separator + identifier)
     }
 
-    @Suppress("BlockingMethodInNonBlockingContext")
-    private suspend fun storeImage(imageUrl: String, file: File, size: Int) = withContext(Dispatchers.IO) {
+    private fun scaleCenterCrop(source: Bitmap, size: Int): Bitmap {
+        val sourceWidth = source.width
+        val sourceHeight = source.height
+
+        val xScale = size.toFloat() / sourceWidth
+        val yScale = size.toFloat() / sourceHeight
+        val scale = min(xScale, yScale)
+
+        val scaledWidth = scale * sourceWidth
+        val scaledHeight = scale * sourceHeight
+
+        val left = (size - scaledWidth) / 2
+        val top = (size - scaledHeight) / 2
+
+        val targetRect = RectF(left, top, left + scaledWidth, top + scaledHeight)
+
+        val dest = Bitmap.createBitmap(size, size, source.config)
+        val canvas = Canvas(dest)
+        canvas.drawBitmap(source, null, targetRect, null)
+        return dest
+    }
+
+    private fun storeImage(imageUrl: String, file: File, size: Int, compress: Bitmap.CompressFormat, quality: Int) {
         URL(imageUrl).openStream().use { input -> FileOutputStream(file).use { output ->
             val source = BitmapFactory.decodeStream(input)
-            val thumb = ThumbnailUtils.extractThumbnail(source, size, size, ThumbnailUtils.OPTIONS_RECYCLE_INPUT)
-            thumb.compress(Bitmap.CompressFormat.WEBP, 0, output)
-            file.name
+            val image = if (source.width == size && source.height == size) { source } else {
+                scaleCenterCrop(source, size)
+            }
+            image.compress(compress, quality, output)
         } }
+    }
+
+    private suspend fun storeTrayImage(imageUrl: String, identifier: String): String {
+        val file = File(packDir(identifier).absolutePath + File.separator + TRAY_IMAGE_NAME)
+        withContext(Dispatchers.IO) {
+            storeImage(imageUrl, file, TRAY_IMAGE_SIZE, Bitmap.CompressFormat.PNG, 100)
+        }
+        return file.name
+    }
+
+    private suspend fun storeStickerImage(imageUrl: String, packIdentifier: String): String {
+        @Suppress("BlockingMethodInNonBlockingContext")
+        val file = File.createTempFile(STICKER_IMAGE_PREFIX, STICKER_IMAGE_SUFFIX, packDir(packIdentifier))
+        storeImage(imageUrl, file, STICKER_IMAGE_SIZE, Bitmap.CompressFormat.WEBP, 50)
+        return file.name
     }
 
     private suspend fun createStickerPack(config: ReadableMap): StickerPack {
         val identifier = config.getString("identifier")!!
         val title = config.getString("title")!!
-        val packDir = packDir(identifier)
-        val trayImageFileName = storeImage(
-                config.getString("trayImage")!!,
-                File(packDir.absolutePath + File.separator + TRAY_IMAGE_NAME),
-                TRAY_IMAGE_SIZE
-        )
+        val trayImageFileName = storeTrayImage(config.getString("trayImage")!!, identifier)
         val stickerPack = StickerPack(
                 identifier = identifier,
                 name = title,
@@ -99,7 +137,7 @@ class WhatsAppStickersShareModule(
                 }
             }
             promises.add(GlobalScope.async(Dispatchers.IO) {
-                val image = storeImage(imageURL, File.createTempFile(STICKER_IMAGE_PREFIX, STICKER_IMAGE_SUFFIX, packDir), STICKER_IMAGE_SIZE)
+                val image = storeStickerImage(imageURL, identifier)
                 stickerPack.stickers.add(Sticker(image, emojis))
                 Unit
             })
@@ -109,6 +147,7 @@ class WhatsAppStickersShareModule(
         return stickerPack
     }
 
+    @ExperimentalTime
     @ReactMethod
     fun share(config: ReadableMap, promise: Promise) {
         GlobalScope.launch {
@@ -118,7 +157,9 @@ class WhatsAppStickersShareModule(
                     packDir.deleteRecursively()
                 }
 
-                val stickerPack = createStickerPack(config)
+                val stickerPack: StickerPack
+                val duration = measureTime { stickerPack = createStickerPack(config) }
+                Log.d(TAG, "createStickerPack: $duration")
                 withContext(Dispatchers.IO) {
                     val json = Json.stringify(StickerPack.serializer(), stickerPack)
                     val metaFile = File(packDir.absolutePath + File.separator + METADATA_FILENAME)
