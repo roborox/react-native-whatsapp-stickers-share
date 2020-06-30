@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/roborox/react-native-whatsapp-stickers-share/compare/v1.1.2...v1.2.0) (2020-06-30)
+
+
+### Features
+
+* **SM-128:** update stickers share to whatsapp ([28df50b](https://github.com/roborox/react-native-whatsapp-stickers-share/commit/28df50b4dd9a98fc6f15d706b9c386536b2a6383))
+
 ## [1.1.2](https://github.com/roborox/react-native-whatsapp-stickers-share/compare/v1.1.1...v1.1.2) (2020-06-26)
 
 
