@@ -118,7 +118,9 @@ class WhatsAppStickersShareModule(
                 privacyPolicyWebsite = config.getString("privacyPolicyURL")!!,
                 licenseAgreementWebsite = config.getString("licenseURL")!!,
                 imageDataVersion = "1",
-                avoidCache = false
+                avoidCache = false,
+                iosAppStoreLink = config.getString("iosAppStoreLink"),
+                androidPlayStoreLink = config.getString("androidPlayStoreLink")
         )
 
         val stickers = config.getArray("stickers")!!
