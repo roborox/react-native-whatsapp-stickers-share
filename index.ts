@@ -14,7 +14,9 @@ export interface StickerPackConfig {
 	publisherURL: string,
 	privacyPolicyURL: string,
 	licenseURL: string,
-	stickers: StickerConfig[]
+	stickers: StickerConfig[],
+	iosAppStoreLink?: string,
+	androidPlayStoreLink?: string,
 }
 
 export class WhatsAppStickersShare {
