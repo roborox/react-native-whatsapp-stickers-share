@@ -14,13 +14,10 @@ struct Interoperability {
     private static let PasteboardStickerPackDataType: String = "net.whatsapp.third-party.sticker-pack"
     private static let WhatsAppURL: URL = URL(string: "whatsapp://stickerPack")!
 
-    static var iOSAppStoreLink: String?
-    static var AndroidStoreLink: String?
-
     static func canSend() -> Bool {
         return UIApplication.shared.canOpenURL(URL(string: "whatsapp://")!)
     }
-    
+
     static func send(json: [String: Any]) -> Bool {
         if Bundle.main.bundleIdentifier?.contains(DefaultBundleIdentifier) == true {
           fatalError("Your bundle identifier must not include the default one.")
@@ -28,11 +25,7 @@ struct Interoperability {
 
         let pasteboard = UIPasteboard.general
 
-        var jsonWithAppStoreLink: [String: Any] = json
-        jsonWithAppStoreLink["ios_app_store_link"] = iOSAppStoreLink
-        jsonWithAppStoreLink["android_play_store_link"] = AndroidStoreLink
-
-        guard let dataToSend = try? JSONSerialization.data(withJSONObject: jsonWithAppStoreLink, options: []) else {
+        guard let dataToSend = try? JSONSerialization.data(withJSONObject: json, options: []) else {
             return false
         }
 
