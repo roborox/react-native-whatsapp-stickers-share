@@ -10,12 +10,12 @@ import Foundation
 
 @objc(WhatsAppStickersShare)
 class WhatsAppStickersShare: NSObject {
-    
-    @objc 
+
+    @objc
     func share(_ config: NSDictionary,
             resolver resolve: @escaping RCTPromiseResolveBlock,
             rejecter reject: @escaping RCTPromiseRejectBlock) -> Void {
-        
+
         let trayUrl = URL(string: RCTConvert.nsString(config["trayImage"]))!
         var storedError: NSError?
 
@@ -31,7 +31,9 @@ class WhatsAppStickersShare: NSObject {
                             trayImageFileName: trayLocalUrl!,
                             publisherWebsite: RCTConvert.nsString(config["publisherURL"]),
                             privacyPolicyWebsite: RCTConvert.nsString(config["privacyPolicyURL"]),
-                            licenseAgreementWebsite: RCTConvert.nsString(config["licenseURL"])
+                            licenseAgreementWebsite: RCTConvert.nsString(config["licenseURL"]),
+                            iOSAppStoreLink: RCTConvert.nsString(config["iosAppStoreLink"]),
+                            androidStoreLink: RCTConvert.nsString(config["androidPlayStoreLink"])
                         )
                         let stickersMap: [NSDictionary] = RCTConvert.nsArray(config["stickers"]) as! [NSDictionary]
                         let group = DispatchGroup()
@@ -40,7 +42,7 @@ class WhatsAppStickersShare: NSObject {
                             group.enter()
                             let imageUrl = URL(string: RCTConvert.nsString(sticker["url"]))!
                             let emojis: [String]? = sticker["emojis"] != nil ? RCTConvert.nsArray(sticker["emojis"]) as? [String] : nil
-                            
+
                             DownloadManager.shared.get(url: imageUrl) { currentUrl, error in
                                 if error != nil { storedError = error } else {
                                     do {
