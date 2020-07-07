@@ -1,3 +1,11 @@
+# [1.3.0](https://github.com/roborox/react-native-whatsapp-stickers-share/compare/v1.2.0...v1.3.0) (2020-07-07)
+
+
+### Features
+
+* **SM-131:** accept play store link from config ([e26e5f9](https://github.com/roborox/react-native-whatsapp-stickers-share/commit/e26e5f93f1065d25e3c5d36316ab7f91ab65673e))
+* **SM-131:** provide apple/google pack links ([d9716dd](https://github.com/roborox/react-native-whatsapp-stickers-share/commit/d9716dd34b5dae26dbdc74e84aa551d76c6a305e))
+
 # [1.2.0](https://github.com/roborox/react-native-whatsapp-stickers-share/compare/v1.1.2...v1.2.0) (2020-06-30)
 
 
