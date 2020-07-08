@@ -119,8 +119,8 @@ class WhatsAppStickersShareModule(
                 licenseAgreementWebsite = config.getString("licenseURL")!!,
                 imageDataVersion = "1",
                 avoidCache = false,
-                iosAppStoreLink = config.getString("iosAppStoreLink"),
-                androidPlayStoreLink = config.getString("androidPlayStoreLink")
+                iosAppStoreLink = if (config.hasKey("iosAppStoreLink")) { config.getString("iosAppStoreLink") } else { null },
+                androidPlayStoreLink = if (config.hasKey("androidPlayStoreLink")) { config.getString("androidPlayStoreLink") } else { null }
         )
 
         val stickers = config.getArray("stickers")!!
