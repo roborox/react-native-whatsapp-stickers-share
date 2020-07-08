@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/roborox/react-native-whatsapp-stickers-share/compare/v1.4.0...v1.4.1) (2020-07-08)
+
+
+### Bug Fixes
+
+* undefined string from config ([1199efb](https://github.com/roborox/react-native-whatsapp-stickers-share/commit/1199efb885819451831f33f79dde37a48fa7182d))
+
 # [1.4.0](https://github.com/roborox/react-native-whatsapp-stickers-share/compare/v1.3.0...v1.4.0) (2020-07-07)
 
 
