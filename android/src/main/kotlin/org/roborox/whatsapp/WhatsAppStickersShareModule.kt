@@ -25,7 +25,7 @@ class WhatsAppStickersShareModule(
         reactContext.addActivityEventListener(this)
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    override fun onActivityResult(activity: Activity?, requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode != REQUEST_CODE_ADD_PACK || data === null) return
         if (resultCode == Activity.RESULT_CANCELED) {
             val error = data.getStringExtra("validation_error")
@@ -34,6 +34,8 @@ class WhatsAppStickersShareModule(
         }
         Log.e(TAG, "Pack added")
     }
+
+    override fun onNewIntent(intent: Intent?) { }
 
     override fun getName() = "WhatsAppStickersShare"
 
