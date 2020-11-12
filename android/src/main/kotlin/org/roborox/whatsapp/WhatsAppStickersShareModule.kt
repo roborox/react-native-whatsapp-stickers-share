@@ -9,18 +9,15 @@ import android.graphics.RectF
 import android.util.Log
 import com.facebook.react.bridge.*
 import kotlinx.coroutines.*
-import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
-import java.lang.Exception
 import java.net.URL
 import kotlin.math.min
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 
 
-@UnstableDefault
 class WhatsAppStickersShareModule(
         private val reactContext: ReactApplicationContext
 ) : ReactContextBaseJavaModule(reactContext), ActivityEventListener {
@@ -28,7 +25,7 @@ class WhatsAppStickersShareModule(
         reactContext.addActivityEventListener(this)
     }
 
-    override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode != REQUEST_CODE_ADD_PACK || data === null) return
         if (resultCode == Activity.RESULT_CANCELED) {
             val error = data.getStringExtra("validation_error")
@@ -37,8 +34,6 @@ class WhatsAppStickersShareModule(
         }
         Log.e(TAG, "Pack added")
     }
-
-    override fun onNewIntent(intent: Intent?) { }
 
     override fun getName() = "WhatsAppStickersShare"
 
@@ -163,7 +158,7 @@ class WhatsAppStickersShareModule(
                 val duration = measureTime { stickerPack = createStickerPack(config) }
                 Log.d(TAG, "createStickerPack: $duration")
                 withContext(Dispatchers.IO) {
-                    val json = Json.stringify(StickerPack.serializer(), stickerPack)
+                    val json = Json.encodeToString(StickerPack.serializer(), stickerPack)
                     val metaFile = File(packDir.absolutePath + File.separator + METADATA_FILENAME)
                     metaFile.writeText(json)
                 }
