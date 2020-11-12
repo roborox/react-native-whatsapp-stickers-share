@@ -10,9 +10,6 @@ class WhatsAppStickersSharePackage : ReactPackage {
     override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule>
             = listOf<NativeModule>(WhatsAppStickersShareModule(reactContext))
 
-    override fun createJSModules(): MutableList<Class<out JavaScriptModule>>
-            = mutableListOf()
-
     override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>>
             = emptyList()
 }
