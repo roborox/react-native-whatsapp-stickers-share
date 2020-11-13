@@ -1,3 +1,14 @@
+## [1.4.2](https://github.com/roborox/react-native-whatsapp-stickers-share/compare/v1.4.1...v1.4.2) (2020-11-13)
+
+
+### Bug Fixes
+
+* android no create js modules override ([cddf0da](https://github.com/roborox/react-native-whatsapp-stickers-share/commit/cddf0dadff0c7e9f94cb4ceaee7240cbc5b12614))
+* api usage ([cdc2f61](https://github.com/roborox/react-native-whatsapp-stickers-share/commit/cdc2f619715856aeace80c9d80f053499ef7589c))
+* build with difefrent kotlin version ([fa9e206](https://github.com/roborox/react-native-whatsapp-stickers-share/commit/fa9e206dbd2dffe160d4c9114be49a23f0c7bc53))
+* kotlin plugins versioning ([b2d8445](https://github.com/roborox/react-native-whatsapp-stickers-share/commit/b2d844511541c43490fa9c0843f721acd5abec4b))
+* update module ([7183a2d](https://github.com/roborox/react-native-whatsapp-stickers-share/commit/7183a2dc1bb9e7cb0cca44daba0c39645e53a66d))
+
 ## [1.4.1](https://github.com/roborox/react-native-whatsapp-stickers-share/compare/v1.4.0...v1.4.1) (2020-07-08)
 
 
