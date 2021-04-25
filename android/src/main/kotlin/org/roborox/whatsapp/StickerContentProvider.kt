@@ -123,7 +123,7 @@ class StickerContentProvider : ContentProvider() {
         return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
     }
 
-    override fun openFile(uri: Uri, mode: String?): ParcelFileDescriptor {
+    override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
         return when (matcher.match(uri)) {
             STICKER_FILE, TRAY_FILE -> openFileDescriptor(uri)
             else -> throw FileNotFoundException("Not supported for $uri")
@@ -144,15 +144,15 @@ class StickerContentProvider : ContentProvider() {
         return type
     }
 
-    override fun insert(uri: Uri, values: ContentValues): Uri {
+    override fun insert(uri: Uri, values: ContentValues?): Uri {
         throw UnsupportedOperationException("Not supported")
     }
 
-    override fun update(uri: Uri?, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int {
+    override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int {
         throw UnsupportedOperationException("Not supported")
     }
 
-    override fun delete(uri: Uri?, selection: String?, selectionArgs: Array<out String>?): Int {
+    override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int {
         throw UnsupportedOperationException("Not supported")
     }
 
